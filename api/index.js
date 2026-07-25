@@ -1,5 +1,5 @@
 // api/index.js
-const { verifyKey } = require('discord-interactions');
+import { verifyKey } from 'discord-interactions';
 
 // ==========================================
 // 🛠️ CONFIGURATION & MEDIA (EDIT THESE!) 
