@@ -2,10 +2,8 @@
   "name": "dionysius-bot",
   "version": "1.0.0",
   "description": "Discord party bot",
+  "type": "module",
   "main": "api/index.js",
-  "scripts": {
-    "start": "node api/index.js"
-  },
   "dependencies": {
     "discord-interactions": "^3.1.0",
     "dotenv": "^16.3.1"
