@@ -1,25 +1,13 @@
+const { buffer } = require('micro');
 const { verifyKey } = require('discord-interactions');
 
-// Tell Vercel not to mess with the raw data so Discord verification passes
+// Tell Vercel not to parse the body so Discord signature check works
 module.exports.config = {
   api: {
     bodyParser: false,
   },
 };
 
-// Helper function to read the raw request body safely
-function getRawBody(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on('data', (chunk) => chunks.push(chunk));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', (err) => reject(err));
-  });
-}
-
-// ==========================================
-// 🛠️ CONFIGURATION & MEDIA 
-// ==========================================
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
 
@@ -37,20 +25,19 @@ const ALL_GAMES = [
 
 const SILLY_NAMES = ["Mr. POOTY", "Goblet Goblin", "Village Idiot", "Dionysius' Fool"];
 
-// ==========================================
-// 🧠 MAIN SERVERLESS FUNCTION
-// ==========================================
 module.exports = async function handler(req, res) {
+  // 1. Get the exact raw body using Vercel's built-in buffer helper
   let rawBody;
   try {
-    rawBody = await getRawBody(req);
+    rawBody = await buffer(req);
   } catch (err) {
     return res.status(400).send('Invalid request body');
   }
 
-  // 1. Verify the request comes from Discord
+  // 2. Verify the request comes from Discord
   const signature = req.headers['x-signature-ed25519'];
   const timestamp = req.headers['x-signature-timestamp'];
+  
   const isValidRequest = await verifyKey(rawBody, signature, timestamp, PUBLIC_KEY);
   
   if (!isValidRequest) {
@@ -60,12 +47,12 @@ module.exports = async function handler(req, res) {
   const body = JSON.parse(rawBody.toString('utf-8'));
   const { type, data, member, guild_id, token, application_id, message } = body;
 
-  // 2. Handle Discord Ping (Type 1)
+  // 3. Handle Discord Ping (Type 1) - MUST return type 1 immediately
   if (type === 1) {
     return res.status(200).json({ type: 1 });
   }
 
-  // 3. Handle Slash Command: /domain (Type 2)
+  // 4. Handle Slash Command: /domain (Type 2)
   if (type === 2 && data.name === 'domain') {
     const selectedGames = ALL_GAMES.sort(() => 0.5 - Math.random()).slice(0, 5);
     
@@ -105,7 +92,7 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  // 4. Handle Button Clicks (Type 3)
+  // 5. Handle Button Clicks (Type 3)
   if (type === 3 && data.custom_id.startsWith('door_')) {
     const clickedId = data.custom_id; 
     const userId = member.user.id;
